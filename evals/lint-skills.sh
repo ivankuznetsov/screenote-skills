@@ -205,6 +205,7 @@ require_text .mcp.json "browser-use[cli]==0.13.4" ".mcp.json pins Browser Use 0.
 require_text evals/browser-use-mcp-smoke.sh "browser-use[cli]==0.13.4" "smoke expects Browser Use 0.13.4"
 require_text .mcp.json "mcp==1.26.0" ".mcp.json pins MCP 1.26.0"
 require_text evals/browser-use-mcp-smoke.sh "mcp==1.26.0" "smoke uses MCP 1.26.0"
+require_text .github/workflows/lint.yml "browser-use install" "CI installs Browser Use Chromium before the adapter smoke"
 require_text .mcp.json "screenote_browser_use_mcp.py" ".mcp.json launches the bundled adapter"
 require_text README.md "e960bf5cd40412d1f672b254407e7b192658ea57" "README pins the Screenote CLI revision"
 require_text evals/screenote-cli-smoke.sh "e960bf5cd40412d1f672b254407e7b192658ea57" "CLI smoke expects the pinned Screenote CLI revision"
