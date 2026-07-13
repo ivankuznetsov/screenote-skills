@@ -2,18 +2,23 @@
 
 ## Structural Linting
 
-Deterministic checks on SKILL.md files — no API calls, runs instantly.
+Deterministic checks on both Claude Code and Codex SKILL.md mirrors — no API calls, runs instantly.
 
     ./evals/lint-skills.sh
+    ./evals/lint-skills-test.sh
 
 Validates:
 - All skill directories exist with SKILL.md files
-- Frontmatter fields (name, description, user_invocable, argument)
+- Platform-appropriate frontmatter fields
 - Cross-references between skills point to existing files
 - Viewport values (1280x800 desktop, 768x1024 tablet, 390x844 mobile) are consistent
-- MCP tool names are present where expected
+- Screenote and Browser Use tool names, ledger fields, caps, and trust-boundary wording are present on both surfaces
+- CLI snapshot manifest, exact binary identity, unchanged-resume, terminal event, and 100-image sharding contracts are present on both surfaces
+- Claude Code and Codex skill bodies plus bundled snapshot references remain behaviorally identical after documented platform syntax is normalized
+- The Browser Use and MCP dependency pins match the shipped `.mcp.json`
+- Removing a required Browser Use or Screenote CLI contract from either mirror makes lint fail
 
-Run on every PR that touches `skills/**/*.md`.
+Run on every PR that touches `skills/**/*.md`, `codex-skills/**/*.md`, `.mcp.json`, or the adapter.
 
 ## Browser Use MCP Smoke
 
@@ -21,13 +26,23 @@ Live smoke test for the bundled Browser Use MCP server:
 
     bash evals/browser-use-mcp-smoke.sh
 
-Validates:
-- `uvx --from browser-use[cli] browser-use --mcp` starts
-- The expected Browser Use MCP direct-control tool names are present
-- `browser_screenshot` exposes `full_page`
-- The current server still has no viewport-sizing tool, so the skills must fail loudly before upload when fixed desktop/tablet/mobile dimensions are required
+Validates the exact command, arguments, working directory, and environment from `.mcp.json`, then checks:
 
-Run manually before changing browser-use capture behavior. It starts a local MCP subprocess and may install Python packages through `uv`.
+- Browser Use `0.13.4` plus the expected direct-control tools start
+- The adapter exposes exact schemas for viewport sizing, numeric page metrics, exact scrolling, and 5000 px bounded file capture
+- Desktop, tablet, and mobile dimensions are applied and verified at runtime
+- A PNG is written through `browser_screenshot_to_file`
+- Browser sessions are closed after the smoke
+
+The smoke runs in CI and should also be run locally before changing browser-use capture behavior. It starts a local MCP subprocess and may install Python packages through `uv`.
+
+## Screenote CLI Contract Smoke
+
+Hermetic contract test for the separately installed upload CLI:
+
+    bash evals/screenote-cli-smoke.sh
+
+Validates the installed Go module revision, manifest/wait flags, local manifest preflight, and stable JSON errors. A bounded localhost fixture then forces a partial image-upload failure and proves an unchanged rerun resumes the same manifest identity, skips an attached image, and emits exactly one terminal `snapshot_ready` event with a review URL. The smoke never contacts Screenote.
 
 ## Trigger Eval Dataset
 
@@ -44,4 +59,6 @@ Tested `claude -p --output-format json` on 2025-03-10. Findings:
 ## CI Notes
 
 - Lint evals: run on every PR (free, instant)
+- Screenote CLI contract smoke: run on every PR after installing the pinned CLI revision
+- Browser Use adapter smoke: run on every PR with a pinned uv runtime
 - Trigger evals: revisit when tooling improves

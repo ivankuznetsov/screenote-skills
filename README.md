@@ -8,9 +8,13 @@ Give your AI coding agent eyes. Screenshot any page, snapshot your whole app, an
 
 ### Prerequisites
 
-Screenote launches browser automation through the local [browser-use](https://github.com/browser-use/browser-use) MCP server with `uvx --from browser-use[cli] browser-use --mcp`. Install [uv](https://github.com/astral-sh/uv) and Python 3.11+ so the plugin can start that server on demand. The bundled MCP config sets `BROWSER_USE_HEADLESS=false` so manual login opens a visible Chromium window; change it to `true` only for fully public/headless runs.
+Screenote launches a bundled adapter around [Browser Use](https://github.com/browser-use/browser-use) `0.13.4`. Install [uv](https://github.com/astral-sh/uv) and Python 3.11+ so the plugin can resolve the pinned runtime and start it on demand. The adapter adds exact viewport sizing and bounded screenshot-to-file capture, and uses a temporary Chromium profile that is deleted when the skill finishes. The bundled MCP config sets `BROWSER_USE_HEADLESS=false` so manual login opens a visible Chromium window; change it to `true` only for fully public/headless runs.
 
-Also install **ImageMagick** — the default capture path uses `identify` to measure every page and `convert` to crop any page taller than 5000 px, so it is required, not optional. On ImageMagick 7+ the canonical binary is `magick`; `convert`/`identify` ship as compatibility aliases on most distros, but on IM7-only systems (recent Arch, Fedora 40+) you may need to invoke them as `magick convert` / `magick identify`.
+Uploads use the [Screenote CLI](https://github.com/ivankuznetsov/screenote-cli) snapshot manifest workflow. Install the reviewed CLI revision with Go 1.26 or newer:
+
+```bash
+go install github.com/ivankuznetsov/screenote-cli/cmd/screenote@e960bf5cd40412d1f672b254407e7b192658ea57
+```
 
 ### 1. Install the plugin
 
@@ -36,7 +40,15 @@ Direct Claude Code install remains available for existing users:
 
 ### 2. Connect to Screenote
 
-On first use, the agent will authorize access to your Screenote account through the Screenote MCP server.
+On first use, the agent will authorize project discovery and feedback through the Screenote MCP server. Authenticate the CLI separately for uploads:
+
+```bash
+screenote --base-url https://screenote.ai login
+```
+
+For SSH, containers, or other headless sessions, use `screenote --base-url https://screenote.ai login --device`.
+
+The upload skills verify that the CLI base URL and selected project match the MCP connection before capturing, preventing a numeric project ID from being used against the wrong Screenote server.
 
 ### 3. Use it
 
@@ -66,10 +78,13 @@ The agent discovers all routes in your codebase, handles authentication, and scr
 
 ## What's New
 
-- Screenote now ships its own browser-use MCP server configuration instead of depending on a host-provided Playwright MCP server.
+- Screenote now ships a pinned Browser Use MCP adapter instead of depending on a host-provided Playwright MCP server.
+- Screenshot bytes are uploaded through `screenote snapshot --manifest`; MCP remains responsible for project discovery/creation and feedback.
+- CLI uploads are content-bound, resumable with an unchanged manifest, and return a machine-readable review URL.
 - `/screenote` and `/snapshot` capture full scrolling pages by default, not just the first viewport.
-- Long or infinite-scroll pages are capped at the first **5000 px or 10 scrolls** (whichever fires first) so captures finish predictably.
-- Sticky headers, footers, and sidebars stay in place. They can repeat if the fallback stitched capture path is used.
+- Output is capped at the first **5000 px**, and lazy-load traversal is bounded to **10 downward scrolls**, so long or infinite-scroll pages finish predictably.
+- Captures are written directly to temporary PNG files, avoiding oversized MCP image payloads and overlapping stitched tiles.
+- Snapshot browser profiles are ephemeral and authenticated sessions are closed on every completion or abort path.
 
 ## How It Works
 
@@ -105,7 +120,7 @@ Claude Code examples below use slash commands. In Codex, use the same skill name
 /screenote https://myapp.com/dashboard
 ```
 
-Captures **three viewports by default** — desktop (1280×800), tablet (768×1024), and mobile (390×844) — and uploads them as one Screenshot. Each viewport is a full-page capture: the agent scrolls first to trigger lazy-loaded content, captures the scrolling page, and caps the image at 5000 px or 10 scrolls (whichever fires first). In Screenote, device icons let the reviewer switch between variants and annotate each layout independently.
+Captures **three viewports by default** — desktop (1280×800), tablet (768×1024), and mobile (390×844) — and uploads them as one Screenshot through a Screenote CLI snapshot manifest. Each viewport is a full-page capture: the agent scrolls first to trigger lazy-loaded content, bounds traversal to 10 downward scrolls, and caps the resulting image at 5000 px. In Screenote, device icons let the reviewer switch between variants and annotate each layout independently.
 
 Works with any URL your machine can reach — localhost, staging, production.
 
@@ -126,9 +141,9 @@ For a single viewport instead, prefix the argument:
 The snapshot workflow:
 1. **Discovers routes** — scans your codebase for route definitions (React Router, Next.js, Vue Router, Express, Django, Rails, etc.)
 2. **Handles auth** — logs in if needed so authenticated pages are captured
-3. **Screenshots every page at three viewports** — desktop, tablet, mobile (default), full-page with the 5000 px or 10-scroll cap (whichever fires first)
+3. **Screenshots every page at three viewports** — desktop, tablet, mobile (default), with a 5000 px output cap and 10-scroll lazy-load budget
 4. **Tags with metadata** — every screenshot title includes the date and last git commit hash (e.g., `App Snapshot — 2025-06-15 — a1b2c3d — /dashboard`)
-5. **Uploads to Screenote** — all viewports are uploaded; reviewers flip between them per page
+5. **Uploads with the Screenote CLI** — a manifest groups viewport variants, resumes unchanged partial uploads, and returns the review URL. Runs above 100 images are split at page boundaries into multiple CLI snapshots
 
 For a single viewport, prefix the argument:
 
@@ -173,8 +188,9 @@ The plugin automatically matches your local working directory name to a Screenot
 
 - A [Screenote](https://screenote.ai) account
 - Claude Code or Codex
-- Python 3.11+ and [uv](https://github.com/astral-sh/uv) for the bundled browser-use MCP server
-- ImageMagick (`convert` and `identify`, or `magick convert` / `magick identify` on ImageMagick 7+) — required on the **default** capture path (height check on every page and crop on any page taller than 5000 px), not just for fallback stitching
+- Python 3.11+ and [uv](https://github.com/astral-sh/uv) for the bundled Browser Use adapter
+- Go 1.26+ and the pinned `screenote` CLI revision above for manifest uploads
+- Chromium or Chrome available to Browser Use
 - The Screenote MCP server configured by this plugin
 
 ## License

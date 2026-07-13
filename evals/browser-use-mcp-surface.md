@@ -1,6 +1,6 @@
 # Browser Use MCP Tool Surface
 
-Last checked: 2026-05-15.
+Last checked: 2026-07-13.
 
 Sources:
 - Official Browser Use MCP docs: https://docs.browser-use.com/open-source/customize/integrations/mcp-server
@@ -9,13 +9,14 @@ Sources:
 
 ## Local MCP Launch
 
-The plugin launches Browser Use with:
+The plugin launches the bundled adapter with `uv`; its runtime dependencies are exact pins:
 
 ```bash
-uvx --from browser-use[cli] browser-use --mcp
+uv run --with 'browser-use[cli]==0.13.4' --with 'mcp==1.26.0' \
+  python -c '<load mcp/screenote_browser_use_mcp.py from the plugin root>'
 ```
 
-The official MCP docs document that exact `uvx --from 'browser-use[cli]' browser-use --mcp` launch form and the `BROWSER_USE_HEADLESS` environment variable. The plugin sets `BROWSER_USE_HEADLESS=false` so the manual-login flow opens a visible Chromium window by default.
+Claude Code locates the adapter through `CLAUDE_PLUGIN_ROOT`; Codex resolves `.mcp.json`'s `cwd: "."` against the installed plugin root. The adapter sets a fresh temporary Browser Use `user_data_dir` and removes it after `browser_close_all` or server shutdown. The plugin sets `BROWSER_USE_HEADLESS=false` so manual login opens a visible Chromium window by default.
 
 ## Pinned Direct-Control Tools
 
@@ -38,8 +39,15 @@ The local smoke test verifies these current tool names:
 - `browser_close_session`
 - `browser_close_all`
 
-`browser_screenshot` currently exposes a `full_page` boolean. The skill docs must not assume other screenshot parameter names.
+The adapter preserves these upstream tools and adds:
 
-## Viewport Sizing
+- `browser_set_viewport(width, height)`
+- `browser_page_metrics()`
+- `browser_scroll_to(y)`
+- `browser_screenshot_to_file(path, max_height=5000)`
 
-The current local Browser Use MCP tool surface does not expose a viewport-sizing or resize tool. The Screenote skills must therefore stop before requesting upload URLs when desktop/tablet/mobile dimensions cannot be set. Uploading current-browser-size screenshots as desktop/tablet/mobile would corrupt the Screenote review surface.
+The live smoke requires these names and schemas, exercises all three canonical viewport sizes, and verifies a file-backed PNG. Dependency or schema drift must make the smoke fail.
+
+## Capture Contract
+
+The skills preflight every requested dimension before capture. Normal settling consumes numeric-only metrics rather than page text. Lazy-load traversal stops at the actual bottom/no-advance condition or the 5000 px/10-scroll cap, and Browser Use writes the first 5000 px directly to a new local PNG below the system temp directory. The upstream base64 image response and overlapping tile stitching are not part of the Screenote capture path. After local capture completes, the adapter writes a snapshot manifest and invokes the pinned `screenote snapshot --manifest ... --wait` CLI; that CLI owns remote preparation and upload, and success requires its terminal `snapshot_ready` event with a review URL.
