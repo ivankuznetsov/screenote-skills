@@ -25,6 +25,6 @@ jobs:
       - name: Verify Screenote CLI manifest contract
         run: bash evals/screenote-cli-smoke.sh
       - name: Install Browser Use Chromium
-        run: uvx --from 'browser-use[cli]==0.13.4' browser-use install
+        run: uvx --from 'playwright==1.59.0' playwright install --with-deps chromium
       - name: Verify Browser Use adapter contract
         run: bash evals/browser-use-mcp-smoke.sh
