@@ -10,5 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.4'
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          version: '0.11.13'
       - name: Lint SKILL.md structure
         run: bash evals/lint-skills.sh
+      - name: Verify mirror drift fails lint
+        run: bash evals/lint-skills-test.sh
+      - name: Install pinned Screenote CLI
+        run: go install github.com/ivankuznetsov/screenote-cli/cmd/screenote@e960bf5cd40412d1f672b254407e7b192658ea57
+      - name: Verify Screenote CLI manifest contract
+        run: bash evals/screenote-cli-smoke.sh
+      - name: Verify Browser Use adapter contract
+        run: bash evals/browser-use-mcp-smoke.sh
