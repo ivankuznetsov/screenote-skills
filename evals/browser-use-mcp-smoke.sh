@@ -13,6 +13,7 @@ import asyncio
 import http.server
 import json
 import os
+import shutil
 import tempfile
 import threading
 from pathlib import Path
@@ -68,7 +69,15 @@ def load_params():
     env["BROWSER_USE_HEADLESS"] = "true"
     env["TIMEOUT_BrowserStartEvent"] = "90"
     env["TIMEOUT_BrowserLaunchEvent"] = "90"
+    if configured_executable := os.environ.get("BROWSER_USE_EXECUTABLE_PATH"):
+        env["BROWSER_USE_EXECUTABLE_PATH"] = configured_executable
     if os.environ.get("CI"):
+        browser_path = shutil.which("google-chrome") or shutil.which(
+            "google-chrome-stable"
+        )
+        if not browser_path:
+            raise SystemExit("CI requires an executable Google Chrome binary")
+        env["BROWSER_USE_EXECUTABLE_PATH"] = browser_path
         env["SCREENOTE_BROWSER_DEBUG"] = "true"
     return StdioServerParameters(
         command=browser["command"],

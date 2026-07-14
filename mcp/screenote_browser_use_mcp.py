@@ -163,6 +163,18 @@ class ScreenoteBrowserUseServer(BrowserUseServer):
                 tempfile.mkdtemp(prefix="screenote-browser-use-")
             )
 
+        configured_executable = os.environ.get("BROWSER_USE_EXECUTABLE_PATH", "")
+        if configured_executable:
+            browser_path = Path(configured_executable)
+            if not browser_path.is_absolute():
+                raise RuntimeError("BROWSER_USE_EXECUTABLE_PATH must be absolute")
+            browser_path = browser_path.resolve()
+            if not browser_path.is_file() or not os.access(browser_path, os.X_OK):
+                raise RuntimeError(
+                    "BROWSER_USE_EXECUTABLE_PATH must name an executable file"
+                )
+            kwargs["executable_path"] = str(browser_path)
+
         try:
             await super()._init_browser_session(
                 allowed_domains=allowed_domains,
