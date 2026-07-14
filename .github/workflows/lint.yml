@@ -24,7 +24,5 @@ jobs:
         run: go install github.com/ivankuznetsov/screenote-cli/cmd/screenote@e960bf5cd40412d1f672b254407e7b192658ea57
       - name: Verify Screenote CLI manifest contract
         run: bash evals/screenote-cli-smoke.sh
-      - name: Install Browser Use Chromium
-        run: uvx --from 'playwright==1.59.0' playwright install --with-deps chromium
       - name: Verify Browser Use adapter contract
         run: bash evals/browser-use-mcp-smoke.sh

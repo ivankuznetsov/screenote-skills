@@ -66,6 +66,8 @@ def load_params():
     browser = config["mcpServers"]["browser-use"]
     env = dict(browser.get("env", {}))
     env["BROWSER_USE_HEADLESS"] = "true"
+    env["TIMEOUT_BrowserStartEvent"] = "90"
+    env["TIMEOUT_BrowserLaunchEvent"] = "90"
     return StdioServerParameters(
         command=browser["command"],
         args=browser.get("args", []),
