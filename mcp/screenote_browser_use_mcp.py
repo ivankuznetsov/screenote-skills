@@ -39,13 +39,24 @@ class ScreenoteBrowserUseServer(BrowserUseServer):
     """Extend Browser Use with deterministic, file-backed capture tools."""
 
     def __init__(self, session_timeout_minutes: int = 10):
-        if _env_flag("SCREENOTE_BROWSER_DEBUG", False):
-            from browser_use.logging_config import setup_logging
-
-            logging.disable(logging.NOTSET)
-            setup_logging(stream=sys.stderr, log_level="debug", force_setup=True)
         self._screenote_profile_dir: Path | None = None
         super().__init__(session_timeout_minutes=session_timeout_minutes)
+        if _env_flag("SCREENOTE_BROWSER_DEBUG", False):
+            from browser_use.mcp import server as browser_use_mcp_server
+
+            browser_use_mcp_server._ensure_all_loggers_use_stderr = lambda: None
+            logging.disable(logging.NOTSET)
+            handler = logging.StreamHandler(sys.stderr)
+            handler.setFormatter(
+                logging.Formatter("%(asctime)s - %(levelname)s [%(name)s] %(message)s")
+            )
+            logging.root.handlers = [handler]
+            logging.root.setLevel(logging.DEBUG)
+            for logger_name in list(logging.root.manager.loggerDict):
+                logger = logging.getLogger(logger_name)
+                logger.handlers = [handler]
+                logger.setLevel(logging.DEBUG)
+                logger.propagate = False
 
     def _setup_handlers(self) -> None:
         super()._setup_handlers()
