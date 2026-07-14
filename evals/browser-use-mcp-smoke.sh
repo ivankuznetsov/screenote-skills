@@ -68,6 +68,8 @@ def load_params():
     env["BROWSER_USE_HEADLESS"] = "true"
     env["TIMEOUT_BrowserStartEvent"] = "90"
     env["TIMEOUT_BrowserLaunchEvent"] = "90"
+    if os.environ.get("CI"):
+        env["SCREENOTE_BROWSER_DEBUG"] = "true"
     return StdioServerParameters(
         command=browser["command"],
         args=browser.get("args", []),

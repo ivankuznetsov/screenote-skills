@@ -10,8 +10,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import shutil
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -37,6 +39,11 @@ class ScreenoteBrowserUseServer(BrowserUseServer):
     """Extend Browser Use with deterministic, file-backed capture tools."""
 
     def __init__(self, session_timeout_minutes: int = 10):
+        if _env_flag("SCREENOTE_BROWSER_DEBUG", False):
+            from browser_use.logging_config import setup_logging
+
+            logging.disable(logging.NOTSET)
+            setup_logging(stream=sys.stderr, log_level="debug", force_setup=True)
         self._screenote_profile_dir: Path | None = None
         super().__init__(session_timeout_minutes=session_timeout_minutes)
 
